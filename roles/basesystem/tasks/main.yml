@@ -1,0 +1,61 @@
+---
+- name: Add Jenkins Apt Repository
+  apt_repository: repo='deb http://pkg.jenkins-ci.org/debian binary/' state=present
+
+- name: Add SBT repo
+  apt_repository: repo='deb https://dl.bintray.com/sbt/debian /' state=present
+
+- name: Add SBT Key Server
+  apt_key: keyserver=keyserver.ubuntu.com id=642AC823
+
+- name: Add Jenkins Keys
+  apt_key: url=http://pkg.jenkins-ci.org/debian/jenkins-ci.org.key state=present
+
+- name: Install Base System Packages
+  apt: name={{ item }} update_cache=yes
+  with_items:
+    - python-pip
+    - git-core
+    - vim
+    - jenkins
+    - scala
+    - sbt
+
+- name: Install Py4j Package
+  pip: name=py4j
+
+- name: Install Nosetests Package
+  pip: name=nose
+
+- name: Reload Jenkins Server
+  service: name=jenkins state=restarted
+
+- name: Ensure Jenkins Is Available
+  wait_for: port=8080 delay=20
+
+- name: Jenkins CLI Present
+  copy: src=files/jenkins-cli.jar dest=/var/lib/jenkins/jenkins-cli.jar
+
+- name: Copy Jenkins Job Config
+  copy: src=files/job.xml dest=~
+
+- name: Get Spark
+  sudo: true
+  get_url: url=http://d3kbcqa49mib13.cloudfront.net/spark-1.5.2-bin-hadoop2.6.tgz dest=~
+
+- name: Unarchive Spark
+  unarchive: src=~/spark-1.5.2-bin-hadoop2.6.tgz dest=/var/lib/ copy=no
+
+- name: Sync Jenkins Update Center
+  shell: wget http://updates.jenkins-ci.org/update-center.json -qO- | sed '1d;$d' > /var/lib/jenkins/updates/default.json
+
+- name: Ensure Jenkins Plugins Installed
+  sudo: true
+  shell: java -jar /var/lib/jenkins/jenkins-cli.jar -s http://127.0.0.1:8080 install-plugin github email-ext
+
+- name: Import Jenkins Job
+  sudo: true
+  shell: java -jar /var/lib/jenkins/jenkins-cli.jar -s http://127.0.0.1:8080 create-job PicwellCI < ~/job.xml
+
+- name: Reload Jenkins Server
+  service: name=jenkins state=restarted
