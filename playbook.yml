@@ -1,0 +1,8 @@
+---
+- name: Install CI Server
+  hosts: all
+  sudo: true
+  
+  roles:
+    - basesystem
+
