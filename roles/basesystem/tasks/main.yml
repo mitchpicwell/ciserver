@@ -19,6 +19,7 @@
     - vim
     - jenkins
     - scala
+    - sendmail 
     - sbt
 
 - name: Install Py4j Package
@@ -52,6 +53,12 @@
 - name: Ensure Jenkins Plugins Installed
   sudo: true
   shell: java -jar /var/lib/jenkins/jenkins-cli.jar -s http://127.0.0.1:8080 install-plugin github email-ext
+
+- name: Reload Jenkins Server
+  service: name=jenkins state=restarted
+
+- name: Ensure Jenkins Is Available
+  wait_for: port=8080 delay=20
 
 - name: Import Jenkins Job
   sudo: true
